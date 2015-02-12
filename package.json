@@ -1,0 +1,29 @@
+{
+  "name": "require-error-handler-webpack-plugin",
+  "version": "0.0.1",
+  "description": "Adds error callback to require.ensure and AMD require calls",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/richardscarrott/require-error-handler-webpack-plugin.git"
+  },
+  "keywords": [
+    "webpack",
+    "require.ensure",
+    "require",
+    "error",
+    "handling"
+  ],
+  "author": "Richard Scarrott <riscarrott@googlemail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/richardscarrott/require-error-handler-webpack-plugin/issues"
+  },
+  "homepage": "https://github.com/richardscarrott/require-error-handler-webpack-plugin",
+  "dependencies": {
+    "webpack": "^1.5.3"
+  }
+}
