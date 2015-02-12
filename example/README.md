@@ -228,7 +228,7 @@ webpackJsonp([1],[
 ]);
 ```
 
-# js/1.output.js
+# 2.output.js
 
 ``` javascript
 webpackJsonp([2],{
