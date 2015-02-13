@@ -31,7 +31,18 @@ require(['./b'], function(b) {
 });
 
 require(['./b'], function(b) {
-	console.log('success');
+	console.log('success', b);
 });
 
 require(['./b']);
+
+document.body.onclick = function() {
+
+	var bundle = require('require-error-handler-webpack-plugin/src/BundleLoader!./a');
+	bundle(function(a) {
+		console.log('success', a);
+	}, function() {
+		console.log('error');
+	});
+
+};
