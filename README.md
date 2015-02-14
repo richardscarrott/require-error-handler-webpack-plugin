@@ -76,8 +76,6 @@ Adds an error callback to the [bundle loader](https://github.com/webpack/bundle-
 // Supports both immediate and lazy requires.
 var bundle = require("require-error-handler-webpack-plugin/src/BundleLoader!./file.js");
 
-// To wait until the chunk is available (and get the exports)
-//  you need to async wait for it.
 bundle(function(file) {
     // success
 }, function() {
