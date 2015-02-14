@@ -313,7 +313,7 @@ webpackJsonp([1],[
 ]);
 ```
 
-# js/2.output.js
+# 2.output.js
 
 ``` javascript
 webpackJsonp([2],{
