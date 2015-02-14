@@ -4,13 +4,6 @@
 	Modified by Richard Scarrott @richardscarrott
 */
 
-
-// TODO:
-// - Add support for lazy
-// - Adds support for default wrapper when chunks are merged... *this is prob more
-// an issue with RequireEnsureErrorHandlerPlugin* and *AMDRequireErrorHandlerPlugin*.
-
-
 var loaderUtils = require("loader-utils");
 
 module.exports = function() {};
@@ -30,11 +23,13 @@ module.exports.pitch = function(remainingRequest) {
 	var result;
 	if(query.lazy) {
 		result = [
-			"module.exports = function(cb) {\n",
-			"	require.ensure([], function(require) {\n",
-			"		cb(require(", JSON.stringify("!!" + remainingRequest), "));\n",
+			"module.exports = function(successCallback, errorCallback) {\n",
+			"	require.ensure([], function() {\n",
+			"		successCallback(require(", JSON.stringify("!!" + remainingRequest), "));\n",
+			"	}, function() {\n",
+			"		if (errorCallback) errorCallback.apply(this, arguments);\n",
 			"	}" + chunkNameParam + ");\n",
-			"}"];
+			"};"];
 	} else {
 		result = [
 			"var cbs,\n",
@@ -54,9 +49,9 @@ module.exports.pitch = function(remainingRequest) {
 			"			error: errorCallback\n",
 			"		});\n",
 			"	}\n",
-			"}\n",
+			"};\n",
 			"function requireBundle() {\n",
-			"	cbs = []\n",
+			"	cbs = [];\n",
 			"	require.ensure([], function() {\n",
 			"		data = require(", JSON.stringify("!!" + remainingRequest), ");\n",
 			"		for(var i = 0, l = cbs.length; i < l; i++) {\n",
@@ -71,7 +66,7 @@ module.exports.pitch = function(remainingRequest) {
 			"		error = true;\n",
 			"		cbs = null;\n",
 			"	}" + chunkNameParam + ");\n",
-			"};\n",
+			"}\n",
 			"requireBundle();"
 		];
 	}
@@ -81,44 +76,26 @@ module.exports.pitch = function(remainingRequest) {
 /*
 Output format:
 
-	var cbs = [],
-		data;
-	module.exports = function(cb) {
-		if(cbs) cbs.push(cb);
-		else cb(data);
-	}
-	require.ensure([], function(require) {
-		data = require("xxx");
-		var callbacks = cbs;
-		cbs = null;
-		for(var i = 0, l = callbacks.length; i < l; i++) {
-			callbacks[i](data);
-		}
-	});
-
-	WITH ERROR HANDLING:
-
 	// lazy
 	module.exports = function(successCallback, errorCallback) {
-		require.ensure([], function(require) {\n",
-			successCallback(require(", JSON.stringify("!!" + remainingRequest), "));
+		require.ensure([], function() {\n",
+			successCallback(require("xxx"));
 		}, function() {
 			if (errorCallback) errorCallback.apply(this, arguments);
 		}, 'name');
-	}
+	};
 
-	// regular...what's the point in regular; can lazy not always cover this use case?
+	// non-lazy...kind of dupes the __webpack_require__.e callback handling a little...
 	var cbs,
 		data,
 		error = false;
-
 	module.exports = function(successCallback, errorCallback) {
 		errorCallback = errorCallback || function() {};
 		if (data) {
 			successCallback(data);
 		} else {
 			if (error) {
-				// Try, try, try again.
+				// Try again.
 				requireBundle();
 			}
 			cbs.push({
@@ -126,12 +103,11 @@ Output format:
 				error: errorCallback
 			});
 		}
-	}
-
+	};
 	function requireBundle() {
 		cbs = [];
-		__webpack_require__.e/* nsure *(1, function() {
-			data = __webpack_require__(2);
+		require.ensure([], function(require) {
+			data = require("xxx");
 			for(var i = 0, l = cbs.length; i < l; i++) {
 				cbs[i].success(data);
 			}
@@ -146,7 +122,6 @@ Output format:
 		});
 
 	}
-
 	requireBundle();
 
 */

@@ -53,29 +53,47 @@ NOTE: This depends on the `RequireEnsurePlugin` being applied (webpack does this
 Adds support for the following signatures:
 
 ```javascript
-require(['a']);
-
-require(['b'], function() {
-	// success
-});
-
 require(['c'], function() {
 	// success
 }, function() {
 	// error
 });
+
+require(['b'], function() {
+    // success
+});
+
+require(['a']);
 ```
 
 NOTE: This depends on the `AMDRequirePlugin` being applied (webpack does this by default).
+
+## BundleLoader
+
+Adds an error callback to the [bundle loader](https://github.com/webpack/bundle-loader), e.g.
+
+```javascript
+// Supports both immediate and lazy requires.
+var bundle = require("require-error-handler-webpack-plugin/src/BundleLoader!./file.js");
+
+// To wait until the chunk is available (and get the exports)
+//  you need to async wait for it.
+bundle(function(file) {
+    // success
+}, function() {
+    // errror
+});
+```
+
+## Todo
+- [x] Update `bundle-loader` to support new `require.ensure` syntax.
+- [ ] Work out how to alias the loader to 'bundle' and carry across query params.
+- [ ] [Add support for default wrapper when chunks are merged](https://github.com/richardscarrott/require-error-handler-webpack-plugin/blob/master/src/RequireEnsureErrorHandlerDependency.js#L24)
+- [ ] Add support for named chunks using AMD, i.e. require(name?, deps, successCallback?, errorCallback?)
+- [ ] *Remove hacks* required to get this to work by, potentially, requesting changes to webpack to make it easier to hook in.
 
 ## Related
 - https://github.com/webpack/webpack/issues/758
 - https://github.com/richardscarrott/webpack
 - https://github.com/webpack/webpack/pull/785
 - https://github.com/webpack/webpack/pull/692
-
-
-## Todo
-- [ ] Update `bundle-loader` to support new `require.ensure` syntax.
-- [ ] Add support for named chunks using AMD, i.e. require(name?, deps, successCallback?, errorCallback?)
-- [ ] *Remove hacks* required to get this to work by, potentially, requesting changes to webpack to make it easier to hook in.
