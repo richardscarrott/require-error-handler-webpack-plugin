@@ -10,6 +10,12 @@ module.exports = {
         path: __dirname,
         filename: 'output.js'
     },
+    // resolveLoader: {
+    //     alias: {
+    //         // This doesn't carry across query params... i.e. bundle?lazy!./a...
+    //         'bundle': 'require-error-handler-webpack-plugin/src/BundleLoader'
+    //     }
+    // }
     plugins: [
         new requireErrorHandler.JsonpErrorHandlerPlugin(JsonpMainTemplatePlugin),
         new requireErrorHandler.RequireEnsureErrorHandlerPlugin(),

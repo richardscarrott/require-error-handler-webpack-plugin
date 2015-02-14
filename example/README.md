@@ -34,10 +34,25 @@ require(['./b'], function(b) {
 });
 
 require(['./b'], function(b) {
-  console.log('success');
+  console.log('success', b);
 });
 
 require(['./b']);
+
+// bundle loader
+var bundle = require('require-error-handler-webpack-plugin/src/BundleLoader!./a');
+bundle(function(a) {
+  console.log('success', a);
+}, function() {
+  console.log('error');
+});
+
+bundle = require('require-error-handler-webpack-plugin/src/BundleLoader?lazy!./a');
+bundle(function(a) {
+    console.log('success', a);
+}, function() {
+    console.log('error');
+});
 ```
 
 # output.js
@@ -91,7 +106,7 @@ require(['./b']);
 /******/      // cover buggy onerror / readystate implementations by checking whether the chunk is actually installed
 /******/      onComplete(installedChunks[chunkId] !== 0);
 /******/    };
-/******/    script.src = __webpack_require__.p + "output." + ({"1":"1"}[chunkId]||chunkId) + ".js";
+/******/    script.src = __webpack_require__.p + "" + chunkId + ".output.js";
 /******/    head.appendChild(script);
 /******/  }
 /******/
@@ -205,10 +220,80 @@ require(['./b']);
   });
 
   __webpack_require__.e/* require */(2/* duplicate */, function(__webpack_require__) { var __WEBPACK_AMD_REQUIRE_ARRAY__ = [__webpack_require__(2)]; (function(b) {
-    console.log('success');
+    console.log('success', b);
   }.apply(null, __WEBPACK_AMD_REQUIRE_ARRAY__));});
 
   __webpack_require__.e/* require */(2/* duplicate */, function() {[__webpack_require__(2)];});
+
+  // bundle loader
+  var bundle = __webpack_require__(3);
+  bundle(function(a) {
+    console.log('success', a);
+  }, function() {
+    console.log('error');
+  });
+
+  bundle = __webpack_require__(4);
+  bundle(function(a) {
+      console.log('success', a);
+  }, function() {
+      console.log('error');
+  });
+
+/***/ },
+/* 1 */,
+/* 2 */,
+/* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
+  var cbs,
+    data,
+    error = false;
+  module.exports = function(successCallback, errorCallback) {
+    errorCallback = errorCallback || function() {};
+    if (data) {
+      successCallback(data);
+    } else {
+      if (error) {
+        // Try again.
+        requireBundle();
+      }
+      cbs.push({
+        success: successCallback,
+        error: errorCallback
+      });
+    }
+  };
+  function requireBundle() {
+    cbs = [];
+    __webpack_require__.e/* nsure */(1/* duplicate */, function() {
+      data = __webpack_require__(1);
+      for(var i = 0, l = cbs.length; i < l; i++) {
+        cbs[i].success(data);
+      }
+      error = false;
+      cbs = null;
+    }, function() {
+      for(var i = 0, l = cbs.length; i < l; i++) {
+        cbs[i].error();
+      }
+      error = true;
+      cbs = null;
+    });
+  }
+  requireBundle();
+
+/***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+  module.exports = function(successCallback, errorCallback) {
+    __webpack_require__.e/* nsure */(1/* duplicate */, function() {
+      successCallback(__webpack_require__(1));
+    }, function() {
+      if (errorCallback) errorCallback.apply(this, arguments);
+    });
+  };
 
 /***/ }
 /******/ ])
@@ -222,7 +307,7 @@ webpackJsonp([1],[
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-  modules.exports = 'a';
+  module.exports = 'a';
 
 /***/ }
 ]);
@@ -236,7 +321,7 @@ webpackJsonp([2],{
 /***/ 2:
 /***/ function(module, exports, __webpack_require__) {
 
-  modules.exports = 'b';
+  module.exports = 'b';
 
 /***/ }
 
@@ -246,14 +331,16 @@ webpackJsonp([2],{
 # Info
 
 ```
-Hash: c317c104b74f1b8a7d46
+Hash: c4832e63e3309491f0ff
 Version: webpack 1.5.3
-Time: 41ms
+Time: 101ms
       Asset  Size  Chunks             Chunk Names
-  output.js  6322       0  [emitted]  main
-1.output.js   128       1  [emitted]  1
-2.output.js   122       2  [emitted]
-   [0] ./example.js 692 {0} [built]
-   [1] ./a.js 22 {1} [built]
-   [2] ./b.js 22 {2} [built]
+  output.js  7785       0  [emitted]  main
+1.output.js   127       1  [emitted]  1
+2.output.js   121       2  [emitted]  
+   [0] ./example.js 1071 {0} [built]
+   [1] ./a.js 21 {1} [built]
+   [2] ./b.js 21 {2} [built]
+   [3] ../src/BundleLoader.js!./a.js 735 {0} [built]
+   [4] ../src/BundleLoader.js?lazy!./a.js 280 {0} [built]
 ```
