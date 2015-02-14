@@ -51,13 +51,21 @@ AMDRequireDependency.Template.prototype.apply = function(dep, source, outputOpti
 			var start = depBlock.errorCallbackRange ? depBlock.errorCallbackRange[1] : depBlock.successCallbackRange[1];
 			source.replace(start, depBlock.outerRange[1]-1, wrapper[1]);
 		} else {
+			debugger;
+			// source.replace(depBlock.outerRange[0], depBlock.arrayRange[0]-1,
+			// 	"!/* require */(" + asComment(depBlock.chunkReason) + "function() { ");
+			// source.insert(depBlock.arrayRange[0] + 0.9, "var __WEBPACK_AMD_REQUIRE_ARRAY__ = ");
+			// source.replace(depBlock.arrayRange[1], depBlock.successCallbackRange[0]-1, "; (");
+			// source.insert(depBlock.successCallbackRange[1], ".apply(null, __WEBPACK_AMD_REQUIRE_ARRAY__));}");
+			// // var start = depBlock.errorCallbackRange ? depBlock.errorCallbackRange[1] : depBlock.successCallbackRange[1];
+			// source.replace(depBlock.successCallbackRange[1], depBlock.outerRange[1]-1, "}())");
+
 			source.replace(depBlock.outerRange[0], depBlock.arrayRange[0]-1,
 				"!/* require */(" + asComment(depBlock.chunkReason) + "function() { ");
 			source.insert(depBlock.arrayRange[0] + 0.9, "var __WEBPACK_AMD_REQUIRE_ARRAY__ = ");
 			source.replace(depBlock.arrayRange[1], depBlock.successCallbackRange[0]-1, "; (");
-			source.insert(depBlock.successCallbackRange[1], ".apply(null, __WEBPACK_AMD_REQUIRE_ARRAY__));}");
-			var start = depBlock.errorCallbackRange ? depBlock.errorCallbackRange[1] : depBlock.successCallbackRange[1];
-			source.replace(start, depBlock.outerRange[1]-1, wrapper[1]);
+			source.insert(depBlock.successCallbackRange[1], ".apply(null, __WEBPACK_AMD_REQUIRE_ARRAY__));");
+			source.replace(depBlock.successCallbackRange[1], depBlock.outerRange[1]-1, "}())");
 		}
 	}
 };

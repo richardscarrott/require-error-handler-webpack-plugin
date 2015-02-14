@@ -21,15 +21,25 @@ RequireEnsureErrorHandlerDependency.Template = function RequireEnsureErrorHandle
 RequireEnsureErrorHandlerDependency.Template.prototype.apply = function(dep, source, outputOptions, requestShortener) {
 	var depBlock = dep.block;
 	var wrapper = DepBlockHelpers.getLoadDepBlockWrapper(depBlock, outputOptions, requestShortener, /*require.e*/"nsure");
-	if(!wrapper) wrapper = [
-		"!/* require.ensure */(",
-		"(__webpack_require__))"
-	];
-	source.replace(depBlock.expr.range[0], depBlock.expr.arguments[1].range[0]-1, wrapper[0]);
-	if (depBlock.chunkName) {
-		source.replace(depBlock.expr.arguments[depBlock.expr.arguments.length-2].range[1], depBlock.expr.range[1]-1, wrapper[1]);
-	} else {
-		source.replace(depBlock.expr.arguments[depBlock.expr.arguments.length-1].range[1], depBlock.expr.range[1]-1, wrapper[1]);
+	var openingStart = depBlock.expr.range[0];
+	var openingEnd = depBlock.expr.arguments[1].range[0]-1;
+	var closingStart;
+	var closingEnd = depBlock.expr.range[1]-1;
+	if (!wrapper) {
+		// module is in same chunk so just call success immediately.
+		wrapper = [
+			"!/* require.ensure */(",
+			"(__webpack_require__))"
+		];
+		closingStart = depBlock.expr.arguments[1].range[1];
+	} else { 
+		if (depBlock.chunkName) {
+			closingStart = depBlock.expr.arguments[depBlock.expr.arguments.length - 2].range[1];
+		} else {
+			closingStart = depBlock.expr.arguments[depBlock.expr.arguments.length - 1].range[1];
+		}
 	}
+	source.replace(openingStart, openingEnd, wrapper[0]);
+	source.replace(closingStart, closingEnd, wrapper[1]);
 };
 

@@ -86,9 +86,10 @@ bundle(function(file) {
 ## Todo
 - [x] Update `bundle-loader` to support new `require.ensure` syntax.
 - [ ] Work out how to alias the loader to 'bundle' and carry across query params.
-- [ ] [Add support for default wrapper when chunks are merged](https://github.com/richardscarrott/require-error-handler-webpack-plugin/blob/master/src/RequireEnsureErrorHandlerDependency.js#L24)
+- [x] [Add support for default wrapper when chunks are merged](https://github.com/richardscarrott/require-error-handler-webpack-plugin/blob/master/src/RequireEnsureErrorHandlerDependency.js#L24)
 - [ ] Add support for named chunks using AMD, i.e. require(name?, deps, successCallback?, errorCallback?)
-- [ ] *Remove hacks* required to get this to work by, potentially, requesting changes to webpack to make it easier to hook in.
+- [ ] Work out how [this](https://github.com/webpack/webpack/blob/e436659b34c3285f6fbb1a7d5bdcf11f87da57cb/lib/dependencies/DepBlockHelpers.js#L20) can occur and support it.
+- [ ] *Remove hacks* required to get this to work by potentially requesting changes to webpack to make it easier to hook in.
 
 ## Related
 - https://github.com/webpack/webpack/issues/758
