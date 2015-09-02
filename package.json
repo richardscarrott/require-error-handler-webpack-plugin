@@ -25,6 +25,6 @@
   "homepage": "https://github.com/richardscarrott/require-error-handler-webpack-plugin",
   "dependencies": {
     "loader-utils": "^0.2.6",
-    "webpack": "^1.5.3"
+    "webpack": "^1.12.0"
   }
 }

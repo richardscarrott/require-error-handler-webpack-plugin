@@ -8,7 +8,8 @@ module.exports = {
     entry: './example.js',
     output: {
         path: __dirname,
-        filename: 'output.js'
+        filename: 'output.js',
+        chunkFilename: '[name].js'
     },
     // resolveLoader: {
     //     alias: {
