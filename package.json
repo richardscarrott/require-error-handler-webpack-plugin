@@ -1,6 +1,6 @@
 {
   "name": "require-error-handler-webpack-plugin",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Adds error callback to require.ensure and AMD require calls",
   "main": "index.js",
   "scripts": {

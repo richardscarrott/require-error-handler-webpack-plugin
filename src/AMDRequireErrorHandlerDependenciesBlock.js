@@ -22,4 +22,5 @@ function AMDRequireErrorHandlerDependenciesBlock(expr, arrayRange, successCallba
 module.exports = AMDRequireErrorHandlerDependenciesBlock;
 
 AMDRequireErrorHandlerDependenciesBlock.prototype = Object.create(AsyncDependenciesBlock.prototype);
+AMDRequireErrorHandlerDependenciesBlock.prototype.constructor = AMDRequireErrorHandlerDependenciesBlock;
 

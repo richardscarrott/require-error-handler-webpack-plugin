@@ -1,6 +1,9 @@
 # require-error-handler-webpack-plugin
 Adds error callback to require.ensure and AMD require calls.
 
+> NOTE: Split point error handling was landed in Webpack 2 via [`System.import`](https://github.com/webpack/webpack/commit/bf1f1142d0124560cea82589498f81d5c808aec8)
+so I'd strongly advise against using this plugin.
+
 ## Usage
 
 ```javascript

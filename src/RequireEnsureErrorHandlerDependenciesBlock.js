@@ -14,4 +14,4 @@ function RequireEnsureErrorHandlerDependenciesBlock(expr, chunkName, module, loc
 module.exports = RequireEnsureErrorHandlerDependenciesBlock;
 
 RequireEnsureErrorHandlerDependenciesBlock.prototype = Object.create(AsyncDependenciesBlock.prototype);
-
+RequireEnsureErrorHandlerDependenciesBlock.prototype.constructor = RequireEnsureErrorHandlerDependenciesBlock;

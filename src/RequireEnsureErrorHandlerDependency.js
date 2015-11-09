@@ -14,6 +14,7 @@ function RequireEnsureErrorHandlerDependency(block) {
 module.exports = RequireEnsureErrorHandlerDependency;
 
 RequireEnsureErrorHandlerDependency.prototype = Object.create(NullDependency.prototype);
+RequireEnsureErrorHandlerDependency.prototype.constructor = RequireEnsureErrorHandlerDependency;
 RequireEnsureErrorHandlerDependency.prototype.type = "require.ensure";
 
 RequireEnsureErrorHandlerDependency.Template = function RequireEnsureErrorHandlerDependencyTemplate() {};
@@ -32,7 +33,7 @@ RequireEnsureErrorHandlerDependency.Template.prototype.apply = function(dep, sou
 			"(__webpack_require__))"
 		];
 		closingStart = depBlock.expr.arguments[1].range[1];
-	} else { 
+	} else {
 		if (depBlock.chunkName) {
 			closingStart = depBlock.expr.arguments[depBlock.expr.arguments.length - 2].range[1];
 		} else {
