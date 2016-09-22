@@ -27,15 +27,18 @@ RequireEnsureErrorHandlerPlugin.prototype.apply = function(compiler) {
 
 		compilation.dependencyFactories.set(RequireEnsureErrorHandlerDependency, new NullFactory());
 		compilation.dependencyTemplates.set(RequireEnsureErrorHandlerDependency, new RequireEnsureErrorHandlerDependency.Template());
-	});
-	new RequireEnsureErrorHandlerDependenciesBlockParserPlugin().apply(compiler.parser);
-	compiler.parser.plugin("evaluate typeof require.ensure", function(expr) {
-		return new BasicEvaluatedExpression().setString("function").setRange(expr.range);
-	});
-	compiler.parser.plugin("typeof require.ensure", function(expr) {
-		var dep = new ConstDependency("'function'", expr.range);
-		dep.loc = expr.loc;
-		this.state.current.addDependency(dep);
-		return true;
+
+		normalModuleFactory.plugin("parser", function(parser, options) {
+			new RequireEnsureErrorHandlerDependenciesBlockParserPlugin().apply(parser);
+			parser.plugin("evaluate typeof require.ensure", function(expr) {
+				return new BasicEvaluatedExpression().setString("function").setRange(expr.range);
+			});
+			parser.plugin("typeof require.ensure", function(expr) {
+				var dep = new ConstDependency("'function'", expr.range);
+				dep.loc = expr.loc;
+				this.state.current.addDependency(dep);
+				return true;
+			});
+		});
 	});
 };

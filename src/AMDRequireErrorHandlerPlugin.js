@@ -15,13 +15,18 @@ module.exports = AMDErrorHandlerPlugin;
 
 AMDErrorHandlerPlugin.prototype.apply = function(compiler) {
 
+	var options = this.options;
+
 	compiler.plugin("compilation", function(compilation, params) {
+		var normalModuleFactory = params.normalModuleFactory;
+
 		compilation.dependencyFactories.set(AMDRequireErrorHandlerDependency, new NullFactory());
 		compilation.dependencyTemplates.set(AMDRequireErrorHandlerDependency, new AMDRequireErrorHandlerDependency.Template());
+
+		normalModuleFactory.plugin("parser", function(parser, options) {
+			parser.apply(
+				new AMDRequireErrorHandlerDependenciesBlockParserPlugin(options)
+			);
+		});
 	});
-
-	compiler.parser.apply(
-		new AMDRequireErrorHandlerDependenciesBlockParserPlugin(this.options)
-	);
-
 };
