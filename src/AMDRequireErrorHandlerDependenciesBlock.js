@@ -17,7 +17,9 @@ function AMDRequireErrorHandlerDependenciesBlock(expr, arrayRange, successCallba
 		arrayRange ? arrayRange :
 		successCallbackRange ? successCallbackRange :
 		expr.range;
-	this.addDependency(new AMDRequireErrorHandlerDependency(this));
+	var dep = new AMDRequireErrorHandlerDependency(this);
+	dep.loc = loc;
+	this.addDependency(dep);
 }
 module.exports = AMDRequireErrorHandlerDependenciesBlock;
 

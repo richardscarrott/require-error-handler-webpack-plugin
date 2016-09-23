@@ -4,100 +4,170 @@
 	Modified by Richard Scarrott @richardscarrott
 */
 
-// a) require.ensure(['deps'], successCallback, errorCallback, name);
-// b) require.ensure(['deps'], successCallback, errorCallback);
-// c) require.ensure(['deps'], successCallback, name);
-// d) require.ensure(['deps'], successCallback);
+// a) require(['a']);
+// b) require(['a'], successCallback);
+// c) require(['a'], successCallback, errorCallback);
 
-var AbstractPlugin = require("webpack/lib/AbstractPlugin");
-var RequireEnsureErrorHandlerDependenciesBlock = require("./RequireEnsureErrorHandlerDependenciesBlock");
-var RequireEnsureItemDependency = require("webpack/lib/dependencies/RequireEnsureItemDependency");
+var AMDRequireItemDependency = require("webpack/lib/dependencies/AMDRequireItemDependency");
+var AMDRequireArrayDependency = require("webpack/lib/dependencies/AMDRequireArrayDependency");
+var AMDRequireContextDependency = require("webpack/lib/dependencies/AMDRequireContextDependency");
+
+//var AMDRequireDependenciesBlock = require("webpack/lib/dependencies/AMDRequireDependenciesBlock");
+
+var UnsupportedDependency = require("webpack/lib/dependencies/UnsupportedDependency");
+var LocalModuleDependency = require("webpack/lib/dependencies/LocalModuleDependency");
+var ContextDependencyHelpers = require("webpack/lib/dependencies/ContextDependencyHelpers");
+var LocalModulesHelpers = require("webpack/lib/dependencies/LocalModulesHelpers");
+var ConstDependency = require("webpack/lib/dependencies/ConstDependency");
 var getFunctionExpression = require("webpack/lib/dependencies/getFunctionExpression");
+var UnsupportedFeatureWarning = require("webpack/lib/UnsupportedFeatureWarning");
 
-module.exports = AbstractPlugin.create({
-	"call require.ensure": function(expr) {
+var AMDRequireErrorHandlerDependenciesBlock = require("./AMDRequireErrorHandlerDependenciesBlock");
 
-		var dependencies = expr.arguments[0],
-			successCallback = expr.arguments[1],
-			errorCallback = expr.arguments[2],
-			chunkName = expr.arguments[3],
-			dependenciesExpr = null,
-			successCallbackExpr = null,
-			errorCallbackExpr = null,
-			chunkNameExpr = null;
+function AMDRequireErrorHandlerDependenciesBlockParserPlugin(options) {
+	this.options = options;
+}
 
-		if (errorCallback) {
-			errorCallbackExpr = getFunctionExpression(errorCallback);
-			// if `errorCallback` isn't a function then shuffle arguments.
-			if (!errorCallbackExpr) {
-				chunkName = errorCallback;
-				errorCallback = errorCallbackExpr = null;
-			}
-		}
+module.exports = AMDRequireErrorHandlerDependenciesBlockParserPlugin;
 
-		if (chunkName) {
-			chunkNameExpr = this.evaluateExpression(chunkName);
-			if (chunkNameExpr.isString()) {
-				chunkName = chunkNameExpr.string;
-			}
-		}
-
-		dependenciesExpr = this.evaluateExpression(dependencies);
-		var dependenciesItems = dependenciesExpr.isArray() ? dependenciesExpr.items : [dependenciesExpr];
-		successCallbackExpr = getFunctionExpression(successCallback);
-
-		if (successCallbackExpr) {
-			this.walkExpressions(successCallbackExpr.expressions);
-		}
-
-		if (errorCallbackExpr) {
-			this.walkExpressions(errorCallbackExpr.expressions);
-		}
-
-		var dep = new RequireEnsureErrorHandlerDependenciesBlock(expr, chunkName, this.state.module, expr.loc);
-		var old = this.state.current;
-		this.state.current = dep;
-		try {
-			var failed = false;
-			this.inScope([], function() {
-				dependenciesItems.forEach(function(ee) {
-					if(ee.isString()) {
-						// TODO: work out what RequireEnsureItemDependency is for
-						// and if it needs to be extended for the errorhandling plugin.
-						var edep = new RequireEnsureItemDependency(ee.string, ee.range);
-						edep.loc = dep.loc;
-						dep.addDependency(edep);
-					} else {
-						failed = true;
+AMDRequireErrorHandlerDependenciesBlockParserPlugin.prototype.apply = function(parser) {
+	var options = this.options;
+	parser.plugin("call require", function(expr) {
+		var param;
+		var dep;
+		var old;
+		var result;
+		switch(expr.arguments.length) {
+			case 1:
+				param = this.evaluateExpression(expr.arguments[0]);
+				dep = new AMDRequireErrorHandlerDependenciesBlock(expr, param.range, null, null, this.state.module, expr.loc);
+				old = this.state.current;
+				this.state.current = dep;
+				this.inScope([], function() {
+					result = this.applyPluginsBailResult("call require:amd:array", expr, param);
+				}.bind(this));
+				this.state.current = old;
+				if(!result) return;
+				this.state.current.addBlock(dep);
+				return true;
+			case 2:
+			case 3:
+				param = this.evaluateExpression(expr.arguments[0]);
+				var successCallback = expr.arguments[1];
+				var errorCallback = expr.arguments[2] || {};
+				dep = new AMDRequireErrorHandlerDependenciesBlock(expr, param.range, successCallback.range, errorCallback.range, this.state.module, expr.loc);
+				dep.loc = expr.loc;
+				old = this.state.current;
+				this.state.current = dep;
+				try {
+					this.inScope([], function() {
+						result = this.applyPluginsBailResult("call require:amd:array", expr, param);
+					}.bind(this));
+					if(!result) {
+						dep = new UnsupportedDependency("unsupported", expr.range);
+						old.addDependency(dep);
+						if(this.state.module)
+							this.state.module.errors.push(new UnsupportedFeatureWarning(this.state.module, "Cannot statically analyse 'require(..., ...)' in line " + expr.loc.start.line));
+						dep = null;
+						return true;
 					}
-				});
-			});
-			if(failed) {
-				return;
-			}
-			if(successCallbackExpr) {
-				if(successCallbackExpr.fn.body.type === "BlockStatement")
-					this.walkStatement(successCallbackExpr.fn.body);
-				else
-					this.walkExpression(successCallbackExpr.fn.body);
-			}
-			if(errorCallbackExpr) {
-				if(errorCallbackExpr.fn.body.type === "BlockStatement")
-					this.walkStatement(errorCallbackExpr.fn.body);
-				else
-					this.walkExpression(errorCallbackExpr.fn.body);
-			}
-			old.addBlock(dep);
-		} finally {
-			this.state.current = old;
+					[successCallback, errorCallback].forEach(function(callback) {
+						var fnData = getFunctionExpression(callback);
+						if(fnData) {
+							this.inScope(fnData.fn.params.filter(function(i) {
+								return ["require", "module", "exports"].indexOf(i.name) < 0;
+							}), function() {
+								if(fnData.fn.body.type === "BlockStatement")
+									this.walkStatement(fnData.fn.body);
+								else
+									this.walkExpression(fnData.fn.body);
+							}.bind(this));
+							this.walkExpressions(fnData.expressions);
+							if(fnData.needThis === false) {
+								// smaller bundles for simple function expression
+								dep.bindThis = false;
+							}
+						}
+						else {
+							this.walkExpression(callback);
+						}
+					}.bind(this));
+				} finally {
+					this.state.current = old;
+					if(dep)
+						this.state.current.addBlock(dep);
+				}
+				return true;
 		}
-		if(!successCallbackExpr) {
-			this.walkExpression(successCallback);
+	});
+	parser.plugin("call require:amd:array", function(expr, param) {
+		if(param.isArray()) {
+			param.items.forEach(function(param) {
+				var result = this.applyPluginsBailResult("call require:amd:item", expr, param);
+				if(result === undefined) {
+					this.applyPluginsBailResult("call require:amd:context", expr, param);
+				}
+			}, this);
+			return true;
+		} else if(param.isConstArray()) {
+			var deps = [];
+			param.array.forEach(function(request) {
+				var dep, localModule;
+				if(request === "require") {
+					dep = "__webpack_require__";
+				} else if(["exports", "module"].indexOf(request) >= 0) {
+					dep = request;
+				} else if(localModule = LocalModulesHelpers.getLocalModule(this.state, request)) { // eslint-disable-line no-cond-assign
+					dep = new LocalModuleDependency(localModule);
+					dep.loc = expr.loc;
+					this.state.current.addDependency(dep);
+				} else {
+					dep = new AMDRequireItemDependency(request);
+					dep.loc = expr.loc;
+					dep.optional = !!this.scope.inTry;
+					this.state.current.addDependency(dep);
+				}
+				deps.push(dep);
+			}, this);
+			var dep = new AMDRequireArrayDependency(deps, param.range);
+			dep.loc = expr.loc;
+			dep.optional = !!this.scope.inTry;
+			this.state.current.addDependency(dep);
+			return true;
 		}
-		if(!errorCallbackExpr && errorCallback) {
-			this.walkExpression(errorCallback);
+	});
+	parser.plugin("call require:amd:item", function(expr, param) {
+		if(param.isConditional()) {
+			param.options.forEach(function(param) {
+				var result = this.applyPluginsBailResult("call require:amd:item", expr, param);
+				if(result === undefined) {
+					this.applyPluginsBailResult("call require:amd:context", expr, param);
+				}
+			}, this);
+			return true;
+		} else if(param.isString()) {
+			var dep, localModule;
+			if(param.string === "require") {
+				dep = new ConstDependency("__webpack_require__", param.string);
+			} else if(["exports", "module"].indexOf(param.string) >= 0) {
+				dep = new ConstDependency(param.string, param.range);
+			} else if(localModule = LocalModulesHelpers.getLocalModule(this.state, param.string)) { // eslint-disable-line no-cond-assign
+				dep = new LocalModuleDependency(localModule, param.range);
+			} else {
+				dep = new AMDRequireItemDependency(param.string, param.range);
+			}
+			dep.loc = expr.loc;
+			dep.optional = !!this.scope.inTry;
+			this.state.current.addDependency(dep);
+			return true;
 		}
+	});
+	parser.plugin("call require:amd:context", function(expr, param) {
+		var dep = ContextDependencyHelpers.create(AMDRequireContextDependency, param.range, param, expr, options);
+		if(!dep) return;
+		dep.loc = expr.loc;
+		dep.optional = !!this.scope.inTry;
+		this.state.current.addDependency(dep);
 		return true;
-	}
-});
-
+	});
+};
