@@ -8,7 +8,6 @@ var DepBlockHelpers = require("webpack/lib/dependencies/DepBlockHelpers");
 
 function RequireEnsureErrorHandlerDependency(block) {
 	NullDependency.call(this);
-	this.Class = RequireEnsureErrorHandlerDependency;
 	this.block = block;
 }
 module.exports = RequireEnsureErrorHandlerDependency;
@@ -21,26 +20,17 @@ RequireEnsureErrorHandlerDependency.Template = function RequireEnsureErrorHandle
 
 RequireEnsureErrorHandlerDependency.Template.prototype.apply = function(dep, source, outputOptions, requestShortener) {
 	var depBlock = dep.block;
-	var wrapper = DepBlockHelpers.getLoadDepBlockWrapper(depBlock, outputOptions, requestShortener, /*require.e*/"nsure");
-	var openingStart = depBlock.expr.range[0];
-	var openingEnd = depBlock.expr.arguments[1].range[0]-1;
-	var closingStart;
-	var closingEnd = depBlock.expr.range[1]-1;
-	if (!wrapper) {
-		// module is in same chunk so just call success immediately.
-		wrapper = [
-			"!/* require.ensure */(",
-			"(__webpack_require__))"
-		];
-		closingStart = depBlock.expr.arguments[1].range[1];
-	} else {
-		if (depBlock.chunkName) {
-			closingStart = depBlock.expr.arguments[depBlock.expr.arguments.length - 2].range[1];
-		} else {
-			closingStart = depBlock.expr.arguments[depBlock.expr.arguments.length - 1].range[1];
-		}
+	var wrapper = DepBlockHelpers.getLoadDepBlockWrapper(depBlock, outputOptions, requestShortener, /*require.e*/ "nsure");
+
+	var args = depBlock.expr.arguments;
+	var argCount = args.length;
+	var depBlockExprArgs = argCount === 3 || (depBlock.chunkName && argCount === 4) ? args[2] : null;
+	var sourceExtra = "";
+	if (depBlockExprArgs && depBlockExprArgs.type === "FunctionExpression") {
+		sourceExtra = ".catch(" + source._source._value.substring(depBlockExprArgs.range[0], depBlockExprArgs.range[1]) + ")"
 	}
-	source.replace(openingStart, openingEnd, wrapper[0]);
-	source.replace(closingStart, closingEnd, wrapper[1]);
+
+	source.replace(depBlock.expr.range[0], depBlock.expr.arguments[1].range[0] - 1, wrapper[0] + "(");
+	source.replace(depBlock.expr.arguments[1].range[1], depBlock.expr.range[1] - 1, ").bind(null, __webpack_require__)" + wrapper[1] + sourceExtra);
 };
 

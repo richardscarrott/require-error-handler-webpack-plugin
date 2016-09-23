@@ -22,14 +22,18 @@ RequireEnsureErrorHandlerPlugin.prototype.apply = function(compiler) {
 	compiler.plugin("compilation", function(compilation, params) {
 		var normalModuleFactory = params.normalModuleFactory;
 
+
 		compilation.dependencyFactories.set(RequireEnsureItemDependency, normalModuleFactory);
 		compilation.dependencyTemplates.set(RequireEnsureItemDependency, new RequireEnsureItemDependency.Template());
 
 		compilation.dependencyFactories.set(RequireEnsureErrorHandlerDependency, new NullFactory());
 		compilation.dependencyTemplates.set(RequireEnsureErrorHandlerDependency, new RequireEnsureErrorHandlerDependency.Template());
 
-		normalModuleFactory.plugin("parser", function(parser, options) {
-			new RequireEnsureErrorHandlerDependenciesBlockParserPlugin().apply(parser);
+		normalModuleFactory.plugin("parser", function(parser, parserOptions) {
+			if(typeof parserOptions.requireEnsure !== "undefined" && !parserOptions.requireEnsure)
+				return;
+
+			parser.apply(new RequireEnsureErrorHandlerDependenciesBlockParserPlugin());
 			parser.plugin("evaluate typeof require.ensure", function(expr) {
 				return new BasicEvaluatedExpression().setString("function").setRange(expr.range);
 			});

@@ -4,68 +4,100 @@
 	Modified by Richard Scarrott @richardscarrott
 */
 
-// a) require(['a']);
-// b) require(['a'], successCallback);
-// c) require(['a'], successCallback, errorCallback);
+// a) require.ensure(['deps'], successCallback, errorCallback, name);
+// b) require.ensure(['deps'], successCallback, errorCallback);
+// c) require.ensure(['deps'], successCallback, name);
+// d) require.ensure(['deps'], successCallback);
 
-var AMDRequireErrorHandlerDependenciesBlock = require("./AMDRequireErrorHandlerDependenciesBlock");
+var AbstractPlugin = require("webpack/lib/AbstractPlugin");
+var RequireEnsureErrorHandlerDependenciesBlock = require("./RequireEnsureErrorHandlerDependenciesBlock");
+var RequireEnsureItemDependency = require("webpack/lib/dependencies/RequireEnsureItemDependency");
+var getFunctionExpression = require("webpack/lib/dependencies/getFunctionExpression");
 
-function AMDRequireErrorHandlerDependenciesBlockParserPlugin(options) {
-	this.options = options;
-}
+module.exports = AbstractPlugin.create({
+	"call require.ensure": function(expr) {
 
-module.exports = AMDRequireErrorHandlerDependenciesBlockParserPlugin;
+		var dependencies = expr.arguments[0],
+			successCallback = expr.arguments[1],
+			errorCallback = expr.arguments[2],
+			chunkName = expr.arguments[3],
+			dependenciesExpr = null,
+			successCallbackExpr = null,
+			errorCallbackExpr = null,
+			chunkNameExpr = null;
 
-AMDRequireErrorHandlerDependenciesBlockParserPlugin.prototype.apply = function(parser) {
-	var options = this.options;
-	parser.plugin("call require", function(expr) {
-		switch(expr.arguments.length) {
-		case 1:
-			var param = this.evaluateExpression(expr.arguments[0]);
-			var result;
-			var dep = new AMDRequireErrorHandlerDependenciesBlock(expr, param.range, null, null, this.state.module, expr.loc);
-			var old = this.state.current;
-			this.state.current = dep;
-			this.inScope([], function() {
-				result = this.applyPluginsBailResult("call require:amd:array", expr, param);
-			}.bind(this));
-			this.state.current = old;
-			if(!result) return;
-			this.state.current.addBlock(dep);
-			return true;
-		case 2:
-		case 3:
-			var param = this.evaluateExpression(expr.arguments[0]);
-			var successCallback = expr.arguments[1];
-			var errorCallback = expr.arguments[2] || {};
-			var dep = new AMDRequireErrorHandlerDependenciesBlock(expr, param.range, successCallback.range, errorCallback.range, this.state.module, expr.loc);
-			dep.loc = expr.loc;
-			var old = this.state.current;
-			this.state.current = dep;
-			try {
-				var result;
-				this.inScope([], function() {
-					result = this.applyPluginsBailResult("call require:amd:array", expr, param);
-				}.bind(this));
-				if(!result) return;
-				[successCallback, errorCallback].forEach(function(callback) {
-					if (callback.type === "FunctionExpression") {
-						this.inScope(callback.params.filter(function(i) {
-							return ["require", "module", "exports"].indexOf(i.name) < 0;
-						}), function() {
-							if(callback.body.type === "BlockStatement")
-								this.walkStatement(callback.body);
-							else
-								this.walkExpression(callback.body);
-						}.bind(this));
-					}
-				}.bind(this));
-			} finally {
-				this.state.current = old;
-				this.state.current.addBlock(dep);
+		if (errorCallback) {
+			errorCallbackExpr = getFunctionExpression(errorCallback);
+			// if `errorCallback` isn't a function then shuffle arguments.
+			if (!errorCallbackExpr) {
+				chunkName = errorCallback;
+				errorCallback = errorCallbackExpr = null;
 			}
-			return true;
 		}
-	});
-};
+
+		if (chunkName) {
+			chunkNameExpr = this.evaluateExpression(chunkName);
+			if (chunkNameExpr.isString()) {
+				chunkName = chunkNameExpr.string;
+			}
+		}
+
+		dependenciesExpr = this.evaluateExpression(dependencies);
+		var dependenciesItems = dependenciesExpr.isArray() ? dependenciesExpr.items : [dependenciesExpr];
+		successCallbackExpr = getFunctionExpression(successCallback);
+
+		if (successCallbackExpr) {
+			this.walkExpressions(successCallbackExpr.expressions);
+		}
+
+		if (errorCallbackExpr) {
+			this.walkExpressions(errorCallbackExpr.expressions);
+		}
+
+		var dep = new RequireEnsureErrorHandlerDependenciesBlock(expr, chunkName, this.state.module, expr.loc);
+		var old = this.state.current;
+		this.state.current = dep;
+		try {
+			var failed = false;
+			this.inScope([], function() {
+				dependenciesItems.forEach(function(ee) {
+					if(ee.isString()) {
+						// TODO: work out what RequireEnsureItemDependency is for
+						// and if it needs to be extended for the errorhandling plugin.
+						var edep = new RequireEnsureItemDependency(ee.string, ee.range);
+						edep.loc = dep.loc;
+						dep.addDependency(edep);
+					} else {
+						failed = true;
+					}
+				});
+			});
+			if(failed) {
+				return;
+			}
+			if(successCallbackExpr) {
+				if(successCallbackExpr.fn.body.type === "BlockStatement")
+					this.walkStatement(successCallbackExpr.fn.body);
+				else
+					this.walkExpression(successCallbackExpr.fn.body);
+			}
+			if(errorCallbackExpr) {
+				if(errorCallbackExpr.fn.body.type === "BlockStatement")
+					this.walkStatement(errorCallbackExpr.fn.body);
+				else
+					this.walkExpression(errorCallbackExpr.fn.body);
+			}
+			old.addBlock(dep);
+		} finally {
+			this.state.current = old;
+		}
+		if(!successCallbackExpr) {
+			this.walkExpression(successCallback);
+		}
+		if(!errorCallbackExpr && errorCallback) {
+			this.walkExpression(errorCallback);
+		}
+		return true;
+	}
+});
 
