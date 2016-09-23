@@ -25,7 +25,7 @@ var NullFactory = require("webpack/lib/NullFactory");
 
 
 function AMDErrorHandlerPlugin(options, amdOptions) {
-	this.amdOptions = amdOptions;
+	this.amdOptions = amdOptions || {};
 	this.options = options;
 }
 module.exports = AMDErrorHandlerPlugin;
