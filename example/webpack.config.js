@@ -1,7 +1,6 @@
 // webpack --config example/webpack.config.js
 
 var requireErrorHandler = require('require-error-handler-webpack-plugin');
-var JsonpMainTemplatePlugin = require('webpack/lib/JsonpMainTemplatePlugin');
 
 module.exports = {
     context: __dirname,
@@ -17,7 +16,6 @@ module.exports = {
     //     }
     // }
     plugins: [
-        new requireErrorHandler.JsonpErrorHandlerPlugin(JsonpMainTemplatePlugin),
         new requireErrorHandler.RequireEnsureErrorHandlerPlugin(),
         new requireErrorHandler.AMDRequireErrorHandlerPlugin()
     ]
