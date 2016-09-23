@@ -1,8 +1,8 @@
 /*
-	MIT License http://www.opensource.org/licenses/mit-license.php
-	Author Tobias Koppers @sokra
-	Modified by Richard Scarrott @richardscarrott
-*/
+ MIT License http://www.opensource.org/licenses/mit-license.php
+ Author Tobias Koppers @sokra
+ Modified by Richard Scarrott @richardscarrott
+ */
 var NullDependency = require("webpack/lib/dependencies/NullDependency");
 var DepBlockHelpers = require("webpack/lib/dependencies/DepBlockHelpers");
 
@@ -35,12 +35,12 @@ AMDRequireDependency.Template.prototype.apply = function(dep, source, outputOpti
 		source.replace(depBlock.arrayRange[1], depBlock.successCallbackRange[0]-1, "; (");
 		source.insert(depBlock.successCallbackRange[1], ".apply(null, __WEBPACK_AMD_REQUIRE_ARRAY__));");
 
-		var sourceExtra = "";
 		if (depBlock.errorCallbackRange) {
-			sourceExtra = ".catch(" + source._source._value.substring(depBlock.errorCallbackRange[0], depBlock.errorCallbackRange[1]) + ")"
+			source.replace(depBlock.successCallbackRange[1], depBlock.errorCallbackRange[0] - 1, "}" + (depBlock.bindThis ? ".bind(this)" : "") + wrapper[1] + '.catch(');
+			source.replace(depBlock.errorCallbackRange[1], depBlock.outerRange[1] - 1, ')');
 		}
-
-		source.replace(depBlock.successCallbackRange[1], depBlock.outerRange[1] - 1, "}" + (depBlock.bindThis ? ".bind(this)" : "") + wrapper[1] + sourceExtra);
+		else {
+			source.replace(depBlock.successCallbackRange[1], depBlock.outerRange[1] - 1, "}" + (depBlock.bindThis ? ".bind(this)" : "") + wrapper[1]);
+		}
 	}
 };
-
