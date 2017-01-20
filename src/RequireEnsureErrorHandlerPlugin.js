@@ -4,45 +4,45 @@
 	Modified by Richard Scarrott @richardscarrott
 */
 
-var RequireEnsureItemDependency = require("webpack/lib/dependencies/RequireEnsureItemDependency");
-var RequireEnsureErrorHandlerDependency = require("./RequireEnsureErrorHandlerDependency");
-var ConstDependency = require("webpack/lib/dependencies/ConstDependency");
+"use strict";
 
-var NullFactory = require("webpack/lib/NullFactory");
+const RequireEnsureItemDependency = require("webpack/lib/dependencies/RequireEnsureItemDependency");
+const RequireEnsureErrorHandlerDependency = require("./RequireEnsureErrorHandlerDependency");
+const ConstDependency = require("webpack/lib/dependencies/ConstDependency");
 
-var RequireEnsureErrorHandlerDependenciesBlockParserPlugin = require("./RequireEnsureErrorHandlerDependenciesBlockParserPlugin");
+const NullFactory = require("webpack/lib/NullFactory");
 
-var BasicEvaluatedExpression = require("webpack/lib/BasicEvaluatedExpression");
+const RequireEnsureErrorHandlerDependenciesBlockParserPlugin = require("./RequireEnsureErrorHandlerDependenciesBlockParserPlugin");
 
-function RequireEnsureErrorHandlerPlugin() {
+const ParserHelpers = require("webpack/lib/ParserHelpers");
+
+class RequireEnsurePlugin {
+
+  apply(compiler) {
+    compiler.plugin("compilation", (compilation, params) => {
+      const normalModuleFactory = params.normalModuleFactory;
+
+      compilation.dependencyFactories.set(RequireEnsureItemDependency, normalModuleFactory);
+      compilation.dependencyTemplates.set(RequireEnsureItemDependency, new RequireEnsureItemDependency.Template());
+
+      compilation.dependencyFactories.set(RequireEnsureErrorHandlerDependency, new NullFactory());
+      compilation.dependencyTemplates.set(RequireEnsureErrorHandlerDependency, new RequireEnsureErrorHandlerDependency.Template());
+
+      params.normalModuleFactory.plugin("parser", (parser, parserOptions) => {
+
+        if(typeof parserOptions.requireEnsure !== "undefined" && !parserOptions.requireEnsure)
+          return;
+
+        parser.apply(new RequireEnsureErrorHandlerDependenciesBlockParserPlugin());
+        parser.plugin("evaluate typeof require.ensure", ParserHelpers.evaluateToString("function"));
+        parser.plugin("typeof require.ensure", (expr) => {
+          const dep = new ConstDependency("'function'", expr.range);
+          dep.loc = expr.loc;
+          parser.state.current.addDependency(dep);
+          return true;
+        });
+      });
+    });
+  }
 }
-module.exports = RequireEnsureErrorHandlerPlugin;
-
-RequireEnsureErrorHandlerPlugin.prototype.apply = function(compiler) {
-	compiler.plugin("compilation", function(compilation, params) {
-		var normalModuleFactory = params.normalModuleFactory;
-
-
-		compilation.dependencyFactories.set(RequireEnsureItemDependency, normalModuleFactory);
-		compilation.dependencyTemplates.set(RequireEnsureItemDependency, new RequireEnsureItemDependency.Template());
-
-		compilation.dependencyFactories.set(RequireEnsureErrorHandlerDependency, new NullFactory());
-		compilation.dependencyTemplates.set(RequireEnsureErrorHandlerDependency, new RequireEnsureErrorHandlerDependency.Template());
-
-		normalModuleFactory.plugin("parser", function(parser, parserOptions) {
-			if(typeof parserOptions.requireEnsure !== "undefined" && !parserOptions.requireEnsure)
-				return;
-
-			parser.apply(new RequireEnsureErrorHandlerDependenciesBlockParserPlugin());
-			parser.plugin("evaluate typeof require.ensure", function(expr) {
-				return new BasicEvaluatedExpression().setString("function").setRange(expr.range);
-			});
-			parser.plugin("typeof require.ensure", function(expr) {
-				var dep = new ConstDependency("'function'", expr.range);
-				dep.loc = expr.loc;
-				this.state.current.addDependency(dep);
-				return true;
-			});
-		});
-	});
-};
+module.exports = RequireEnsurePlugin;

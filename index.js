@@ -1,4 +1,3 @@
-module.exports = {
-	RequireEnsureErrorHandlerPlugin: require('./src/RequireEnsureErrorHandlerPlugin'),
-	AMDRequireErrorHandlerPlugin: require('./src/AMDRequireErrorHandlerPlugin')
-};
+var plugin = require('./src/RequireEnsureErrorHandlerPlugin');
+
+module.exports = plugin;

@@ -4,7 +4,7 @@
   "description": "Adds error callback to require.ensure and AMD require calls",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "example": "webpack --config example/webpack.config.js"
   },
   "repository": {
     "type": "git",
@@ -25,6 +25,6 @@
   "homepage": "https://github.com/richardscarrott/require-error-handler-webpack-plugin",
   "dependencies": {
     "loader-utils": "^0.2.16",
-    "webpack": "^2.1.0-beta.25"
+    "webpack": "^2.2.0"
   }
 }
