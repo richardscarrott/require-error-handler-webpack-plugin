@@ -8,96 +8,99 @@
 // b) require.ensure(['deps'], successCallback, errorCallback);
 // c) require.ensure(['deps'], successCallback, name);
 // d) require.ensure(['deps'], successCallback);
+"use strict";
 
-var AbstractPlugin = require("webpack/lib/AbstractPlugin");
-var RequireEnsureErrorHandlerDependenciesBlock = require("./RequireEnsureErrorHandlerDependenciesBlock");
-var RequireEnsureItemDependency = require("webpack/lib/dependencies/RequireEnsureItemDependency");
-var getFunctionExpression = require("webpack/lib/dependencies/getFunctionExpression");
+const RequireEnsureErrorHandlerDependenciesBlock = require("./RequireEnsureErrorHandlerDependenciesBlock");
+const RequireEnsureItemDependency = require("webpack/lib/dependencies/RequireEnsureItemDependency");
+const getFunctionExpression = require("webpack/lib/dependencies/getFunctionExpression");
 
-module.exports = AbstractPlugin.create({
-	"call require.ensure": function(expr) {
+module.exports = class RequireEnsureDependenciesBlockParserPlugin {
+  apply(parser) {
+    parser.plugin("call require.ensure", expr => {
+      let chunkName = null;
+			let chunkNameRange = null;
+      let errorExpressionArg = null;
+      let errorExpression = null;
+			switch(expr.arguments.length) {
+				case 4:
+				{
+					const chunkNameExpr = parser.evaluateExpression(expr.arguments[3]);
+					if(!chunkNameExpr.isString()) return;
+					chunkNameRange = chunkNameExpr.range;
+					chunkName = chunkNameExpr.string;
+				}
+				case 3:
+				{
+          errorExpressionArg = expr.arguments[2];
+          errorExpression = getFunctionExpression(errorExpressionArg);
 
-		var dependencies = expr.arguments[0],
-			successCallback = expr.arguments[1],
-			errorCallback = expr.arguments[2],
-			chunkName = expr.arguments[3],
-			dependenciesExpr = null,
-			successCallbackExpr = null,
-			errorCallbackExpr = null,
-			chunkNameExpr = null;
-
-		if (errorCallback) {
-			errorCallbackExpr = getFunctionExpression(errorCallback);
-			// if `errorCallback` isn't a function then shuffle arguments.
-			if (!errorCallbackExpr) {
-				chunkName = errorCallback;
-				errorCallback = errorCallbackExpr = null;
-			}
-		}
-
-		if (chunkName) {
-			chunkNameExpr = this.evaluateExpression(chunkName);
-			if (chunkNameExpr.isString()) {
-				chunkName = chunkNameExpr.string;
-			}
-		}
-
-		dependenciesExpr = this.evaluateExpression(dependencies);
-		var dependenciesItems = dependenciesExpr.isArray() ? dependenciesExpr.items : [dependenciesExpr];
-		successCallbackExpr = getFunctionExpression(successCallback);
-
-		if (successCallbackExpr) {
-			this.walkExpressions(successCallbackExpr.expressions);
-		}
-
-		if (errorCallbackExpr) {
-			this.walkExpressions(errorCallbackExpr.expressions);
-		}
-
-		var dep = new RequireEnsureErrorHandlerDependenciesBlock(expr, chunkName, this.state.module, expr.loc);
-		var old = this.state.current;
-		this.state.current = dep;
-		try {
-			var failed = false;
-			this.inScope([], function() {
-				dependenciesItems.forEach(function(ee) {
-					if(ee.isString()) {
-						// TODO: work out what RequireEnsureItemDependency is for
-						// and if it needs to be extended for the errorhandling plugin.
-						var edep = new RequireEnsureItemDependency(ee.string, ee.range);
-						edep.loc = dep.loc;
-						dep.addDependency(edep);
-					} else {
-						failed = true;
+          if (!errorExpression && !chunkName) {
+            const chunkNameExpr = parser.evaluateExpression(expr.arguments[2]);
+            if(!chunkNameExpr.isString()) return;
+            chunkNameRange = chunkNameExpr.range;
+            chunkName = chunkNameExpr.string;
 					}
-				});
-			});
-			if(failed) {
-				return;
+				}
+				// falls through
+				case 2:
+				{
+					const dependenciesExpr = parser.evaluateExpression(expr.arguments[0]);
+					const dependenciesItems = dependenciesExpr.isArray() ? dependenciesExpr.items : [dependenciesExpr];
+					const successExpressionArg = expr.arguments[1];
+					const successExpression = getFunctionExpression(successExpressionArg);
+
+					if(successExpression) {
+						parser.walkExpressions(successExpression.expressions);
+					}
+          if(errorExpression) {
+            parser.walkExpressions(errorExpression.expressions);
+          }
+
+					const dep = new RequireEnsureErrorHandlerDependenciesBlock(expr,
+						successExpression ? successExpression.fn : successExpressionArg,
+            errorExpression ? errorExpression.fn : errorExpressionArg,
+						chunkName, chunkNameRange, parser.state.module, expr.loc);
+					const old = parser.state.current;
+					parser.state.current = dep;
+					try {
+						let failed = false;
+						parser.inScope([], () => {
+							dependenciesItems.forEach(ee => {
+							if(ee.isString()) {
+							const edep = new RequireEnsureItemDependency(ee.string, ee.range);
+							edep.loc = dep.loc;
+							dep.addDependency(edep);
+						} else {
+							failed = true;
+						}
+					});
+					});
+						if(failed) {
+							return;
+						}
+						if(successExpression) {
+							if(successExpression.fn.body.type === "BlockStatement")
+								parser.walkStatement(successExpression.fn.body);
+							else
+								parser.walkExpression(successExpression.fn.body);
+						}
+            if(errorExpression) {
+              if(errorExpression.fn.body.type === "BlockStatement")
+                parser.walkStatement(errorExpression.fn.body);
+              else
+                parser.walkExpression(errorExpression.fn.body);
+            }
+						old.addBlock(dep);
+					} finally {
+						parser.state.current = old;
+					}
+					if(!successExpression) {
+						parser.walkExpression(successExpressionArg);
+					}
+					return true;
+				}
 			}
-			if(successCallbackExpr) {
-				if(successCallbackExpr.fn.body.type === "BlockStatement")
-					this.walkStatement(successCallbackExpr.fn.body);
-				else
-					this.walkExpression(successCallbackExpr.fn.body);
-			}
-			if(errorCallbackExpr) {
-				if(errorCallbackExpr.fn.body.type === "BlockStatement")
-					this.walkStatement(errorCallbackExpr.fn.body);
-				else
-					this.walkExpression(errorCallbackExpr.fn.body);
-			}
-			old.addBlock(dep);
-		} finally {
-			this.state.current = old;
-		}
-		if(!successCallbackExpr) {
-			this.walkExpression(successCallback);
-		}
-		if(!errorCallbackExpr && errorCallback) {
-			this.walkExpression(errorCallback);
-		}
-		return true;
-	}
-});
+		});
+  }
+};
 

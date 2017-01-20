@@ -1,56 +1,23 @@
-// require.ensure
-// require('./a'); // <-- prevent a chunking
-
 require.ensure(['./a'], function() {
 	var a = require('./a');
-    console.log('success', a);
+    console.log('success require ensure 1', a);
 }, function() {
-    console.log('error');
-}, '1');
+    console.log('error require ensure 1');
+}, 'chunkName1');
 
-require.ensure(['./a'], function() {
-	var a = require('./a');
-    console.log('success', a);
+require.ensure(['./b'], function() {
+	var b = require('./b');
+    console.log('success require ensure 2', b);
 }, function() {
-    console.log('error');
+    console.log('error require ensure 2');
 });
 
-require.ensure(['./a'], function() {
-	var a = require('./a');
-    console.log('success', a);
-}, 'c');
+require.ensure(['./c'], function() {
+	var c = require('./c');
+    console.log('success require ensure 3', c);
+}, 'chunkName3');
 
-require.ensure(['./a'], function() {
-	var a = require('./a');
-    console.log('success', a);
-});
-
-// AMD
-// require('./b'); // <-- prevent b chunking
-
-require(['./b'], function(b) {
-	console.log('success', b);
-}, function() {
-	console.log('error');
-});
-
-require(['./b'], function(b) {
-	console.log('success', b);
-});
-
-require(['./b']);
-
-// bundle loader
-var bundle = require('require-error-handler-webpack-plugin/src/BundleLoader!./a');
-bundle(function(a) {
-	console.log('success', a);
-}, function() {
-	console.log('error');
-});
-
-bundle = require('require-error-handler-webpack-plugin/src/BundleLoader?lazy!./a');
-bundle(function(a) {
-    console.log('success', a);
-}, function() {
-    console.log('error');
+require.ensure(['./d'], function() {
+	var d = require('./d');
+    console.log('success require ensure 4', d);
 });

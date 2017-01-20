@@ -1,24 +1,18 @@
 // webpack --config example/webpack.config.js
 
-var requireErrorHandler = require('require-error-handler-webpack-plugin');
-var JsonpMainTemplatePlugin = require('webpack/lib/JsonpMainTemplatePlugin');
+var RequireEnsureErrorHandlerPlugin = require('../');
+
+var bundleName = '[name]-output.js';
 
 module.exports = {
     context: __dirname,
     entry: './example.js',
     output: {
         path: __dirname,
-        filename: 'output.js'
+        filename: bundleName,
+        chunkFilename: bundleName
     },
-    // resolveLoader: {
-    //     alias: {
-    //         // This doesn't carry across query params... i.e. bundle?lazy!./a...
-    //         'bundle': 'require-error-handler-webpack-plugin/src/BundleLoader'
-    //     }
-    // }
     plugins: [
-        new requireErrorHandler.JsonpErrorHandlerPlugin(JsonpMainTemplatePlugin),
-        new requireErrorHandler.RequireEnsureErrorHandlerPlugin(),
-        new requireErrorHandler.AMDRequireErrorHandlerPlugin()
+        new RequireEnsureErrorHandlerPlugin()
     ]
 };
